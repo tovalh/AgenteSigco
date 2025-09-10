@@ -345,6 +345,7 @@ switch($path) {
 
     default:
         if (empty($path)) {
+            header('Content-Type: text/html; charset=utf-8');
             readfile('dashboard.html');
             exit;
         }
