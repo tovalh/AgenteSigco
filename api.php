@@ -59,6 +59,19 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = $_GET['action'] ?? '';
 
 switch($path) {
+    case 'debug':
+        echo json_encode([
+            'env_vars' => [
+                'MYSQLHOST' => $_ENV['MYSQLHOST'] ?? 'NOT_SET',
+                'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET',
+                'MYSQLUSER' => $_ENV['MYSQLUSER'] ?? 'NOT_SET',
+                'MYSQLPASSWORD' => isset($_ENV['MYSQLPASSWORD']) ? 'SET (' . strlen($_ENV['MYSQLPASSWORD']) . ' chars)' : 'NOT_SET',
+                'MYSQLPORT' => $_ENV['MYSQLPORT'] ?? 'NOT_SET'
+            ],
+            'connection_string' => "mysql:host=$host;port=$port;dbname=$dbname",
+            'username' => $username
+        ]);
+        break;
     case 'register':
         if ($method !== 'POST') {
             http_response_code(405);
