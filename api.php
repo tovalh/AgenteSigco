@@ -9,29 +9,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // --- CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS ---
-$dsn = '';
-$username = '';
-$password = '';
+// Ahora se usa directamente las variables de entorno para una conexión más simple.
+$host = $_ENV['MYSQLHOST'] ?? 'localhost';
+$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
+$username = $_ENV['MYSQLUSER'] ?? 'root';
+$password = $_ENV['MYSQLPASSWORD'] ?? '';
+$port = $_ENV['MYSQLPORT'] ?? 3306;
 
-if (isset($_ENV['MYSQL_URL'])) {
-    $url = parse_url($_ENV['MYSQL_URL']);
-    $dsn = "mysql:host={$url['host']};port={$url['port']};dbname=" . ltrim($url['path'], '/');
-    $username = $url['user'];
-    $password = $url['pass'];
-} else {
-    $host = $_ENV['MYSQLHOST'] ?? 'localhost';
-    $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
-    $username = $_ENV['MYSQLUSER'] ?? 'root';
-    $password = $_ENV['MYSQLPASSWORD'] ?? '';
-    $port = $_ENV['MYSQLPORT'] ?? 3306;
-    $dsn = "mysql:host=$host;port=$port;dbname=$dbname";
-}
+$dsn = "mysql:host=$host;port=$port;dbname=$dbname";
 
-// --- PUNTO DE DEBUG (ÚTIL PARA COMPROBAR LAS VARIABLES) ---
+// --- PUNTO DE DEBUG (Útil para comprobar las variables) ---
 if (($_GET['action'] ?? '') === 'debug') {
     echo json_encode([
         'env_vars' => [
-            'MYSQL_URL' => $_ENV['MYSQL_URL'] ?? 'NOT_SET',
             'MYSQLHOST' => $_ENV['MYSQLHOST'] ?? 'NOT_SET',
             'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET',
             'MYSQLUSER' => $_ENV['MYSQLUSER'] ?? 'NOT_SET',
