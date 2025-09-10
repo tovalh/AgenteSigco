@@ -9,20 +9,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // --- CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS ---
-// Se recomienda usar la variable MYSQL_URL de Railway si está disponible.
-// Si no, se usan las variables individuales.
 $dsn = '';
 $username = '';
 $password = '';
 
 if (isset($_ENV['MYSQL_URL'])) {
-    // La forma recomendada por Railway para un mismo proyecto
     $url = parse_url($_ENV['MYSQL_URL']);
     $dsn = "mysql:host={$url['host']};port={$url['port']};dbname=" . ltrim($url['path'], '/');
     $username = $url['user'];
     $password = $url['pass'];
 } else {
-    // Si no está la URL, se usan las variables individuales.
     $host = $_ENV['MYSQLHOST'] ?? 'localhost';
     $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
     $username = $_ENV['MYSQLUSER'] ?? 'root';
@@ -32,7 +28,6 @@ if (isset($_ENV['MYSQL_URL'])) {
 }
 
 // --- PUNTO DE DEBUG (ÚTIL PARA COMPROBAR LAS VARIABLES) ---
-// Accede a este endpoint con "?action=debug" para ver qué variables está usando tu app.
 if (($_GET['action'] ?? '') === 'debug') {
     echo json_encode([
         'env_vars' => [
@@ -89,7 +84,8 @@ try {
 
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed. Check your environment variables.']);
+    // Este mensaje de error será mucho más detallado
+    echo json_encode(['error' => 'Database connection failed.', 'details' => $e->getMessage()]);
     exit;
 }
 
@@ -360,8 +356,6 @@ switch($path) {
 
     default:
         if (empty($path)) {
-            // Cargar el HTML de la interfaz.
-            // Para que este funcione, el archivo HTML debe estar en la misma carpeta.
             readfile('dashboard.html');
             exit;
         }
@@ -378,4 +372,3 @@ switch($path) {
             ]
         ]);
 }
-?>
