@@ -8,8 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// --- CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS ---
-// Ahora se usa directamente las variables de entorno para una conexión más simple.
+// --- CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS (MYSQL) ---
 $host = $_ENV['MYSQLHOST'] ?? 'localhost';
 $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
 $username = $_ENV['MYSQLUSER'] ?? 'root';
