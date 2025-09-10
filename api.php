@@ -14,6 +14,28 @@ $username = $_ENV['MYSQLUSER'] ?? 'root';
 $password = $_ENV['MYSQLPASSWORD'] ?? '';
 $port = $_ENV['MYSQLPORT'] ?? 3306;
 
+// Debug endpoint - ANTES de la conexión
+if (($_GET['action'] ?? '') === 'debug') {
+    echo json_encode([
+        'env_vars' => [
+            'MYSQLHOST' => $_ENV['MYSQLHOST'] ?? 'NOT_SET',
+            'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET', 
+            'MYSQLUSER' => $_ENV['MYSQLUSER'] ?? 'NOT_SET',
+            'MYSQLPASSWORD' => isset($_ENV['MYSQLPASSWORD']) ? 'SET (' . strlen($_ENV['MYSQLPASSWORD']) . ' chars)' : 'NOT_SET',
+            'MYSQLPORT' => $_ENV['MYSQLPORT'] ?? 'NOT_SET'
+        ],
+        'resolved_vars' => [
+            'host' => $host,
+            'dbname' => $dbname, 
+            'username' => $username,
+            'password' => isset($password) && $password ? 'SET (' . strlen($password) . ' chars)' : 'NOT_SET',
+            'port' => $port
+        ],
+        'connection_string' => "mysql:host=$host;port=$port;dbname=$dbname"
+    ]);
+    exit;
+}
+
 try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
