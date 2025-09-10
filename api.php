@@ -8,36 +8,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-$host = $_ENV['MYSQLHOST'] ?? 'localhost';
-$dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
-$username = $_ENV['MYSQLUSER'] ?? 'root';
-$password = $_ENV['MYSQLPASSWORD'] ?? '';
-$port = $_ENV['MYSQLPORT'] ?? 3306;
+// --- CONFIGURACIÓN DE LA CONEXIÓN A LA BASE DE DATOS ---
+// Se recomienda usar la variable MYSQL_URL de Railway si está disponible.
+// Si no, se usan las variables individuales.
+$dsn = '';
+$username = '';
+$password = '';
 
-// Debug endpoint - ANTES de la conexión
+if (isset($_ENV['MYSQL_URL'])) {
+    // La forma recomendada por Railway para un mismo proyecto
+    $url = parse_url($_ENV['MYSQL_URL']);
+    $dsn = "mysql:host={$url['host']};port={$url['port']};dbname=" . ltrim($url['path'], '/');
+    $username = $url['user'];
+    $password = $url['pass'];
+} else {
+    // Si no está la URL, se usan las variables individuales.
+    $host = $_ENV['MYSQLHOST'] ?? 'localhost';
+    $dbname = $_ENV['MYSQLDATABASE'] ?? 'railway';
+    $username = $_ENV['MYSQLUSER'] ?? 'root';
+    $password = $_ENV['MYSQLPASSWORD'] ?? '';
+    $port = $_ENV['MYSQLPORT'] ?? 3306;
+    $dsn = "mysql:host=$host;port=$port;dbname=$dbname";
+}
+
+// --- PUNTO DE DEBUG (ÚTIL PARA COMPROBAR LAS VARIABLES) ---
+// Accede a este endpoint con "?action=debug" para ver qué variables está usando tu app.
 if (($_GET['action'] ?? '') === 'debug') {
     echo json_encode([
         'env_vars' => [
+            'MYSQL_URL' => $_ENV['MYSQL_URL'] ?? 'NOT_SET',
             'MYSQLHOST' => $_ENV['MYSQLHOST'] ?? 'NOT_SET',
-            'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET', 
+            'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET',
             'MYSQLUSER' => $_ENV['MYSQLUSER'] ?? 'NOT_SET',
             'MYSQLPASSWORD' => isset($_ENV['MYSQLPASSWORD']) ? 'SET (' . strlen($_ENV['MYSQLPASSWORD']) . ' chars)' : 'NOT_SET',
             'MYSQLPORT' => $_ENV['MYSQLPORT'] ?? 'NOT_SET'
         ],
         'resolved_vars' => [
-            'host' => $host,
-            'dbname' => $dbname, 
+            'dsn' => $dsn,
             'username' => $username,
-            'password' => isset($password) && $password ? 'SET (' . strlen($password) . ' chars)' : 'NOT_SET',
-            'port' => $port
-        ],
-        'connection_string' => "mysql:host=$host;port=$port;dbname=$dbname"
-    ]);
+            'password' => isset($password) && $password ? 'SET (' . strlen($password) . ' chars)' : 'NOT_SET'
+        ]
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
 try {
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname", $username, $password);
+    $pdo = new PDO($dsn, $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     $pdo->exec("
@@ -73,7 +89,7 @@ try {
 
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
+    echo json_encode(['error' => 'Database connection failed. Check your environment variables.']);
     exit;
 }
 
@@ -81,19 +97,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = $_GET['action'] ?? '';
 
 switch($path) {
-    case 'debug':
-        echo json_encode([
-            'env_vars' => [
-                'MYSQLHOST' => $_ENV['MYSQLHOST'] ?? 'NOT_SET',
-                'MYSQLDATABASE' => $_ENV['MYSQLDATABASE'] ?? 'NOT_SET',
-                'MYSQLUSER' => $_ENV['MYSQLUSER'] ?? 'NOT_SET',
-                'MYSQLPASSWORD' => isset($_ENV['MYSQLPASSWORD']) ? 'SET (' . strlen($_ENV['MYSQLPASSWORD']) . ' chars)' : 'NOT_SET',
-                'MYSQLPORT' => $_ENV['MYSQLPORT'] ?? 'NOT_SET'
-            ],
-            'connection_string' => "mysql:host=$host;port=$port;dbname=$dbname",
-            'username' => $username
-        ]);
-        break;
     case 'register':
         if ($method !== 'POST') {
             http_response_code(405);
@@ -116,7 +119,7 @@ switch($path) {
 
             if ($existing) {
                 $stmt = $pdo->prepare("
-                      UPDATE agente_clients 
+                      UPDATE agente_clients
                       SET last_seen = NOW(), version = ?, hostname = ?, system_info = ?, status = 'active'
                       WHERE client_id = ?
                   ");
@@ -137,8 +140,8 @@ switch($path) {
                 $licenseKey = strtoupper(substr(md5(uniqid() . microtime()), 0, 32));
 
                 $stmt = $pdo->prepare("
-                      INSERT INTO agente_clients 
-                      (client_id, license_key, hostname, platform, version, system_info, created_at, last_seen, active, status) 
+                      INSERT INTO agente_clients
+                      (client_id, license_key, hostname, platform, version, system_info, created_at, last_seen, active, status)
                       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 1, 'active')
                   ");
                 $stmt->execute([
@@ -202,8 +205,8 @@ switch($path) {
             }
 
             $stmt = $pdo->prepare("
-                  UPDATE agente_clients 
-                  SET last_seen = NOW(), 
+                  UPDATE agente_clients
+                  SET last_seen = NOW(),
                       system_info = ?,
                       stats = ?,
                       status = 'active',
@@ -217,8 +220,8 @@ switch($path) {
             ]);
 
             $stmt = $pdo->prepare("
-                  SELECT * FROM agente_commands 
-                  WHERE client_id = ? AND status = 'pending' 
+                  SELECT * FROM agente_commands
+                  WHERE client_id = ? AND status = 'pending'
                   ORDER BY created_at ASC
               ");
             $stmt->execute([$data['clientId']]);
@@ -249,7 +252,7 @@ switch($path) {
     case 'dashboard':
         try {
             $stmt = $pdo->query("
-                  SELECT 
+                  SELECT
                       client_id,
                       hostname,
                       platform,
@@ -261,7 +264,7 @@ switch($path) {
                       heartbeat_count,
                       system_info,
                       stats
-                  FROM agente_clients 
+                  FROM agente_clients
                   ORDER BY last_seen DESC
               ");
             $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -315,7 +318,7 @@ switch($path) {
 
         try {
             $stmt = $pdo->prepare("
-                  INSERT INTO agente_commands (client_id, command_type, command_data, status) 
+                  INSERT INTO agente_commands (client_id, command_type, command_data, status)
                   VALUES (?, ?, ?, 'pending')
               ");
             $stmt->execute([
@@ -357,6 +360,8 @@ switch($path) {
 
     default:
         if (empty($path)) {
+            // Cargar el HTML de la interfaz.
+            // Para que este funcione, el archivo HTML debe estar en la misma carpeta.
             readfile('dashboard.html');
             exit;
         }
