@@ -558,10 +558,41 @@
                 const jsonResult = JSON.parse(result);
                 console.log('📥 Parsed response:', jsonResult);
                 
-                if (jsonResult.success) {
-                    alert('✅ Ticket enviado a impresión correctamente');
+                if (jsonResult.success && jsonResult.html) {
+                    console.log('🎫 HTML received, now sending to local print service...');
+                    
+                    // Ahora enviar el HTML al servicio local
+                    const printData = {
+                        action: 'print_html',
+                        html: jsonResult.html
+                    };
+                    
+                    console.log('📤 Sending to localhost:5160:', printData);
+                    
+                    try {
+                        const printResponse = await fetch('http://localhost:5160/print', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(printData)
+                        });
+                        
+                        console.log('🖨️ Print service response:', printResponse.status);
+                        
+                        if (printResponse.ok) {
+                            const printResult = await printResponse.text();
+                            console.log('✅ Print result:', printResult);
+                            alert('✅ Ticket enviado a impresión correctamente');
+                        } else {
+                            alert('❌ Error en servicio de impresión: HTTP ' + printResponse.status);
+                        }
+                    } catch (printError) {
+                        console.error('❌ Print service error:', printError);
+                        alert('❌ Error conectando con impresora: ' + printError.message);
+                    }
                 } else {
-                    alert('❌ Error enviando ticket: ' + jsonResult.error);
+                    alert('❌ Error generando ticket: ' + jsonResult.error);
                 }
             } catch (parseError) {
                 console.error('❌ Failed to parse JSON response:', parseError);

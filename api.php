@@ -383,51 +383,13 @@ switch($path) {
             $html = ingreso_html_80mm($rs);
             logMessage("✅ HTML GENERATED", strlen($html) . " chars");
             
-            // Datos para enviar al servicio de impresión
-            $data = [
-                'action' => 'print_html',
-                'html' => $html
-            ];
-            logMessage("📤 SENDING TO PRINT SERVICE", [
-                'url' => 'http://localhost:5160/print',
-                'action' => $data['action'],
-                'html_length' => strlen($html)
+            // Retornar HTML al cliente para que lo envíe desde JavaScript
+            logMessage("📤 RETURNING HTML TO CLIENT");
+            echo json_encode([
+                'success' => true, 
+                'html' => $html,
+                'message' => 'HTML generado correctamente'
             ]);
-
-            // Configurar cURL
-            $ch = curl_init('http://localhost:5160/print');
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-            
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            $curlInfo = curl_getinfo($ch);
-            curl_close($ch);
-            
-            logMessage("📡 CURL RESPONSE", [
-                'http_code' => $httpCode,
-                'curl_error' => $curlError,
-                'response' => $response,
-                'connect_time' => $curlInfo['connect_time'] ?? 'unknown',
-                'total_time' => $curlInfo['total_time'] ?? 'unknown'
-            ]);
-            
-            if ($response !== false && $httpCode === 200) {
-                logMessage("✅ SUCCESS - Ticket sent successfully");
-                echo json_encode(['success' => true, 'message' => 'Ticket enviado correctamente']);
-            } else {
-                $errorMsg = "Error conectando con el servicio de impresión. HTTP: $httpCode";
-                if ($curlError) {
-                    $errorMsg .= ", cURL Error: $curlError";
-                }
-                logMessage("❌ ERROR", $errorMsg);
-                echo json_encode(['success' => false, 'error' => $errorMsg]);
-            }
         } else {
             logMessage("❌ INVALID ACTION", $input);
             echo json_encode(['success' => false, 'error' => 'Acción no válida']);
