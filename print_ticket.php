@@ -11,8 +11,7 @@ function logMessage($message, $data = null) {
     if ($data !== null) {
         $logEntry .= " - Data: " . json_encode($data);
     }
-    error_log($logEntry);
-    echo $logEntry . "\n"; // También lo envía a stdout para Railway logs
+    error_log($logEntry); // Solo error_log, no echo para no contaminar JSON response
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
