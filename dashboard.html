@@ -290,7 +290,10 @@
 <div class="clients-section">
     <div class="clients-header">
         <h2>Agentes Registrados</h2>
-        <button class="refresh-btn" onclick="loadClients()">🔄 Actualizar</button>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="refresh-btn" onclick="printTicket()">🎫 Imprimir Ticket</button>
+            <button class="refresh-btn" onclick="loadClients()">🔄 Actualizar</button>
+        </div>
     </div>
 
     <div class="clients-table">
@@ -525,6 +528,30 @@
 
         checkbox.addEventListener('change', toggleAutoRefresh);
         toggleAutoRefresh();
+    }
+
+    async function printTicket() {
+        try {
+            const response = await fetch('print_ticket.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'print_ticket'
+                })
+            });
+
+            const result = await response.text();
+
+            if (result.includes('success')) {
+                alert('Ticket enviado a impresión correctamente');
+            } else {
+                alert('Error enviando ticket: ' + result);
+            }
+        } catch (error) {
+            alert('Error de conexión: ' + error.message);
+        }
     }
 </script>
 </body>

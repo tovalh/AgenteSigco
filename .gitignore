@@ -12,3 +12,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Composer
+/vendor/
+composer.lock
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Cache
+cache/
+tmp/

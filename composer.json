@@ -1,0 +1,17 @@
+{
+    "name": "agente-sigco/print-system",
+    "description": "Sistema de impresión SIGCO",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "picqer/php-barcode-generator": "^2.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
