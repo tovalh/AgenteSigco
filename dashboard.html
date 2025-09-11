@@ -531,26 +531,45 @@
     }
 
     async function printTicket() {
+        console.log('🎫 Starting print ticket process...');
+        
         try {
+            const requestData = {
+                action: 'print_ticket'
+            };
+            
+            console.log('📤 Sending request:', requestData);
+            
             const response = await fetch('print_ticket.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    action: 'print_ticket'
-                })
+                body: JSON.stringify(requestData)
             });
 
-            const result = await response.text();
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', response.headers);
 
-            if (result.includes('success')) {
-                alert('Ticket enviado a impresión correctamente');
-            } else {
-                alert('Error enviando ticket: ' + result);
+            const result = await response.text();
+            console.log('📥 Raw response:', result);
+
+            try {
+                const jsonResult = JSON.parse(result);
+                console.log('📥 Parsed response:', jsonResult);
+                
+                if (jsonResult.success) {
+                    alert('✅ Ticket enviado a impresión correctamente');
+                } else {
+                    alert('❌ Error enviando ticket: ' + jsonResult.error);
+                }
+            } catch (parseError) {
+                console.error('❌ Failed to parse JSON response:', parseError);
+                alert('❌ Error parsing response: ' + result);
             }
         } catch (error) {
-            alert('Error de conexión: ' + error.message);
+            console.error('❌ Network error:', error);
+            alert('❌ Error de conexión: ' + error.message);
         }
     }
 </script>

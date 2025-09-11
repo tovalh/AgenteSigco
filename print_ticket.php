@@ -4,8 +4,23 @@ use Picqer\Barcode\BarcodeGeneratorPNG;
 
 header('Content-Type: application/json');
 
+// Función para logging
+function logMessage($message, $data = null) {
+    $timestamp = date('Y-m-d H:i:s');
+    $logEntry = "[$timestamp] $message";
+    if ($data !== null) {
+        $logEntry .= " - Data: " . json_encode($data);
+    }
+    error_log($logEntry);
+    echo $logEntry . "\n"; // También lo envía a stdout para Railway logs
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
+    $rawInput = file_get_contents('php://input');
+    logMessage("📥 RECEIVED RAW INPUT", $rawInput);
+    
+    $input = json_decode($rawInput, true);
+    logMessage("📥 PARSED INPUT", $input);
     
     if (isset($input['action']) && $input['action'] === 'print_ticket') {
         
@@ -17,13 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         
         // Generar el HTML del ticket
+        logMessage("🎫 GENERATING TICKET HTML");
         $html = ingreso_html_80mm($rs);
+        logMessage("✅ HTML GENERATED", strlen($html) . " chars");
         
         // Datos para enviar al servicio de impresión
         $data = [
             'action' => 'print_html',
             'html' => $html
         ];
+        logMessage("📤 SENDING TO PRINT SERVICE", [
+            'url' => 'http://localhost:5160/print',
+            'action' => $data['action'],
+            'html_length' => strlen($html)
+        ]);
 
         // Configurar cURL
         $ch = curl_init('http://localhost:5160/print');
@@ -32,20 +54,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        $curlInfo = curl_getinfo($ch);
         curl_close($ch);
         
+        logMessage("📡 CURL RESPONSE", [
+            'http_code' => $httpCode,
+            'curl_error' => $curlError,
+            'response' => $response,
+            'connect_time' => $curlInfo['connect_time'] ?? 'unknown',
+            'total_time' => $curlInfo['total_time'] ?? 'unknown'
+        ]);
+        
         if ($response !== false && $httpCode === 200) {
+            logMessage("✅ SUCCESS - Ticket sent successfully");
             echo json_encode(['success' => true, 'message' => 'Ticket enviado correctamente']);
         } else {
-            echo json_encode(['success' => false, 'error' => 'Error conectando con el servicio de impresión']);
+            $errorMsg = "Error conectando con el servicio de impresión. HTTP: $httpCode";
+            if ($curlError) {
+                $errorMsg .= ", cURL Error: $curlError";
+            }
+            logMessage("❌ ERROR", $errorMsg);
+            echo json_encode(['success' => false, 'error' => $errorMsg]);
         }
     } else {
+        logMessage("❌ INVALID ACTION", $input);
         echo json_encode(['success' => false, 'error' => 'Acción no válida']);
     }
 } else {
+    logMessage("❌ INVALID METHOD", $_SERVER['REQUEST_METHOD']);
     echo json_encode(['success' => false, 'error' => 'Método no permitido']);
 }
 
