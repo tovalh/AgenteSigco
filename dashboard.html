@@ -540,7 +540,7 @@
             
             console.log('📤 Sending request:', requestData);
             
-            const response = await fetch('print_ticket.php', {
+            const response = await fetch('?action=print-ticket', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
